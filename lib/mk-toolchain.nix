@@ -1,4 +1,4 @@
-{ callPackage, fetchurl, lib, stdenv, zlib }:
+{ callPackage, fetchurl, lib, stdenv, zlib, buildPackages }:
 
 suffix:
 { date, components }:
@@ -8,7 +8,7 @@ let
   inherit (lib) attrVals optionalAttrs optionalString platforms;
 
   combine = callPackage ./combine.nix { };
-  rpath = "${zlib}/lib:$out/lib";
+  rpath = "${buildPackages.zlib}/lib:$out/lib";
 
   toolchain = mapAttrs
     (component: source:
@@ -27,7 +27,7 @@ let
               for file in $(find $out/bin -type f); do
                 if isELF "$file"; then
                   patchelf \
-                    --set-interpreter ${stdenv.cc.bintools.dynamicLinker} \
+                    --set-interpreter ${buildPackages.stdenv.cc.bintools.dynamicLinker} \
                     --set-rpath ${rpath} \
                     "$file" || true
                 fi
@@ -46,7 +46,7 @@ let
               for file in $(find $out/lib/rustlib/*/bin -type f); do
                 if isELF "$file"; then
                   patchelf \
-                    --set-interpreter ${stdenv.cc.bintools.dynamicLinker} \
+                    --set-interpreter ${buildPackages.stdenv.cc.bintools.dynamicLinker} \
                     --set-rpath ${stdenv.cc.cc.lib}/lib:${rpath} \
                     "$file" || true
                 fi
@@ -56,8 +56,8 @@ let
             ${optionalString (component == "llvm-tools-preview") ''
               for file in $out/lib/rustlib/*/bin/*; do
                 patchelf \
-                  --set-interpreter ${stdenv.cc.bintools.dynamicLinker} \
-                  --set-rpath $out/lib/rustlib/*/lib \
+                  --set-interpreter ${buildPackages.stdenv.cc.bintools.dynamicLinker} \
+                  --set-rpath $out/lib/rustlib/*/lib:${rpath} \
                   "$file" || true
               done
             ''}
